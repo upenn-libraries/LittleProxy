@@ -1,9 +1,12 @@
 package org.littleshoot.proxy;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 
 import java.net.InetSocketAddress;
 
@@ -11,6 +14,8 @@ import java.net.InetSocketAddress;
  * Convenience base class for implementations of {@link HttpFilters}.
  */
 public class HttpFiltersAdapter implements HttpFilters {
+    
+    public static final HttpResponse REMOVE_PROXY_HANDLER = new DefaultHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.OK);
     protected final HttpRequest originalRequest;
     protected final ChannelHandlerContext ctx;
 

@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.littleshoot.proxy.HttpFiltersAdapter;
 
 import static org.littleshoot.proxy.impl.ConnectionState.AWAITING_CHUNK;
 import static org.littleshoot.proxy.impl.ConnectionState.AWAITING_INITIAL;
@@ -361,8 +362,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      */
     private boolean shortCircuitRespond(HttpResponse shortCircuitResponse) {
         if (shortCircuitResponse != null) {
-            write(shortCircuitResponse);
-            disconnect();
+            if (shortCircuitResponse != HttpFiltersAdapter.REMOVE_PROXY_HANDLER) {
+                write(shortCircuitResponse);
+                disconnect();
+            }
             return true;
         } else {
             return false;
