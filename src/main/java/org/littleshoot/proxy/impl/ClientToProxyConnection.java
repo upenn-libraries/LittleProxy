@@ -207,9 +207,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 originalRequest, ctx);
 
         // Do the pre filtering
-        if (shortCircuitRespond(currentFilters
-                .clientToProxyRequest(httpRequest))) {
-            return DISCONNECT_REQUESTED;
+        ConnectionState shortCircuit = shortCircuitRespond(currentFilters
+                .clientToProxyRequest(httpRequest));
+        if (shortCircuit != null) {
+            return shortCircuit;
         }
 
         // Identify our server and chained proxy
@@ -271,9 +272,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         }
 
         modifyRequestHeadersToReflectProxying(httpRequest);
-        if (shortCircuitRespond(currentFilters
-                .proxyToServerRequest(httpRequest))) {
-            return DISCONNECT_REQUESTED;
+        shortCircuit = shortCircuitRespond(currentFilters
+                .proxyToServerRequest(httpRequest));
+        if (shortCircuit != null) {
+            return shortCircuit;
         }
 
         LOG.debug("Writing request to ProxyToServerConnection");
@@ -360,15 +362,17 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @param shortCircuitResponse
      * @return
      */
-    private boolean shortCircuitRespond(HttpResponse shortCircuitResponse) {
+    private ConnectionState shortCircuitRespond(HttpResponse shortCircuitResponse) {
         if (shortCircuitResponse != null) {
-            if (shortCircuitResponse != HttpFiltersAdapter.REMOVE_PROXY_HANDLER) {
+            if (shortCircuitResponse == HttpFiltersAdapter.REMOVE_PROXY_HANDLER) {
+                return AWAITING_INITIAL;
+            } else {
                 write(shortCircuitResponse);
                 disconnect();
+                return DISCONNECT_REQUESTED;
             }
-            return true;
         } else {
-            return false;
+            return null;
         }
     }
 
