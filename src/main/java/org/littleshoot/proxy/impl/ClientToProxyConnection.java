@@ -365,7 +365,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private ConnectionState shortCircuitRespond(HttpResponse shortCircuitResponse) {
         if (shortCircuitResponse != null) {
             if (shortCircuitResponse == HttpFiltersAdapter.REMOVE_PROXY_HANDLER) {
-                return AWAITING_INITIAL;
+                if (ProxyUtils.isChunked(shortCircuitResponse)) {
+                    return AWAITING_CHUNK;
+                } else {
+                    return AWAITING_INITIAL;
+                }
             } else {
                 write(shortCircuitResponse);
                 disconnect();
