@@ -50,6 +50,7 @@ import static org.littleshoot.proxy.impl.ConnectionState.AWAITING_INITIAL;
 import static org.littleshoot.proxy.impl.ConnectionState.AWAITING_PROXY_AUTHENTICATION;
 import static org.littleshoot.proxy.impl.ConnectionState.DISCONNECT_REQUESTED;
 import static org.littleshoot.proxy.impl.ConnectionState.NEGOTIATING_CONNECT;
+import static org.littleshoot.proxy.impl.ConnectionState.BYPASS;
 
 /**
  * <p>
@@ -207,8 +208,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 originalRequest, ctx);
 
         // Do the pre filtering
-        ConnectionState shortCircuit = shortCircuitRespond(currentFilters
-                .clientToProxyRequest(httpRequest));
+        boolean lastRequestChunk = ProxyUtils.isLastChunk(httpRequest);
+        ConnectionState shortCircuit = shortCircuitRespond(currentFilters.clientToProxyRequest(httpRequest), lastRequestChunk);
         if (shortCircuit != null) {
             return shortCircuit;
         }
@@ -272,8 +273,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         }
 
         modifyRequestHeadersToReflectProxying(httpRequest);
-        shortCircuit = shortCircuitRespond(currentFilters
-                .proxyToServerRequest(httpRequest));
+        shortCircuit = shortCircuitRespond(currentFilters.proxyToServerRequest(httpRequest), lastRequestChunk);
         if (shortCircuit != null) {
             return shortCircuit;
         }
@@ -362,14 +362,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @param shortCircuitResponse
      * @return
      */
-    private ConnectionState shortCircuitRespond(HttpResponse shortCircuitResponse) {
+    private ConnectionState shortCircuitRespond(HttpResponse shortCircuitResponse, boolean lastRequestChunk) {
         if (shortCircuitResponse != null) {
             if (shortCircuitResponse == HttpFiltersAdapter.REMOVE_PROXY_HANDLER) {
-                if (ProxyUtils.isChunked(shortCircuitResponse)) {
-                    return AWAITING_CHUNK;
-                } else {
-                    return AWAITING_INITIAL;
-                }
+                return lastRequestChunk ? AWAITING_INITIAL : BYPASS;
             } else {
                 write(shortCircuitResponse);
                 disconnect();
@@ -379,7 +375,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             return null;
         }
     }
-
+    
     /***************************************************************************
      * Connection Lifecycle
      **************************************************************************/
