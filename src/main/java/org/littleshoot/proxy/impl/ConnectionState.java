@@ -28,6 +28,11 @@ enum ConnectionState {
     AWAITING_PROXY_AUTHENTICATION,
 
     /**
+     * NOOP until further notice (e.g., handled by other ChannelHandler)
+     */
+    BYPASS,
+
+    /**
      * Connected and awaiting initial message (e.g. HttpRequest or
      * HttpResponse).
      */

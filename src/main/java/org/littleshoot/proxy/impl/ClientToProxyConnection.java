@@ -199,7 +199,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 originalRequest, ctx);
 
         // Do the pre filtering
-        ConnectionState shortCircuit = shortCircuitRespond(currentFilters.requestPre(httpRequest));
+        boolean lastRequestChunk = ProxyUtils.isLastChunk(httpRequest);
+        ConnectionState shortCircuit = shortCircuitRespond(currentFilters.requestPre(httpRequest), lastRequestChunk);
         if (shortCircuit != null) {
             return shortCircuit;
         }
@@ -261,7 +262,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         }
 
         modifyRequestHeadersToReflectProxying(httpRequest);
-        shortCircuit = shortCircuitRespond(currentFilters.requestPost(httpRequest));
+        shortCircuit = shortCircuitRespond(currentFilters.requestPost(httpRequest), lastRequestChunk);
         if (shortCircuit != null) {
             return shortCircuit;
         }
@@ -350,14 +351,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @param shortCircuitResponse
      * @return
      */
-    private ConnectionState shortCircuitRespond(HttpResponse shortCircuitResponse) {
+    private ConnectionState shortCircuitRespond(HttpResponse shortCircuitResponse, boolean lastRequestChunk) {
         if (shortCircuitResponse != null) {
-            if (shortCircuitResponse == HttpFiltersAdapter.REMOVE_PROXY_HANDLER) {
-                if (ProxyUtils.isChunked(shortCircuitResponse)) {
-                    return AWAITING_CHUNK;
-                } else {
-                    return AWAITING_INITIAL;
-                }
+            if (shortCircuitResponse == HttpFiltersAdapter.BYPASS_PROXY_HANDLER) {
+                return lastRequestChunk ? AWAITING_INITIAL : BYPASS;
             } else {
                 write(shortCircuitResponse);
                 disconnect();
@@ -367,7 +364,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             return null;
         }
     }
-
+    
     /***************************************************************************
      * Connection Lifecycle
      **************************************************************************/

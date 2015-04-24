@@ -13,7 +13,7 @@ import io.netty.handler.codec.http.HttpVersion;
  */
 public class HttpFiltersAdapter implements HttpFilters {
     
-    public static final HttpResponse REMOVE_PROXY_HANDLER = new DefaultHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.OK);
+    public static final HttpResponse BYPASS_PROXY_HANDLER = new DefaultHttpResponse(HttpVersion.HTTP_1_0, HttpResponseStatus.OK);
     protected final HttpRequest originalRequest;
     protected final ChannelHandlerContext ctx;
 

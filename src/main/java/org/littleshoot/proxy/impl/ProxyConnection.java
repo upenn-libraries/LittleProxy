@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -20,6 +19,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -130,6 +130,8 @@ abstract class ProxyConnection<I extends HttpObject> extends
             // If not tunneling, then we are always dealing with HttpObjects.
             readHTTP((HttpObject) msg);
         }
+        ReferenceCountUtil.retain(msg);
+        ctx.fireChannelRead(msg);
     }
 
     /**
@@ -140,7 +142,12 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @SuppressWarnings("unchecked")
     private void readHTTP(HttpObject httpObject) {
         ConnectionState nextState = getCurrentState();
-        switch (getCurrentState()) {
+        switch (nextState) {
+        case BYPASS:
+            if (ProxyUtils.isLastChunk(httpObject)) {
+                nextState = AWAITING_INITIAL;
+            }
+            break;
         case AWAITING_INITIAL:
             nextState = readHTTPInitial((I) httpObject);
             break;
